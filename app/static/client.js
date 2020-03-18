@@ -13,17 +13,17 @@ function showPicked(input) {
   reader.readAsDataURL(input.files[0]);
 }
 
-async function analyze() {
+async function analyzeImage() {
   let uploadFiles = d3.select('#file-input').property('files');
   if (uploadFiles.length !== 1) alert("Please select a file to analyze!");
-  let fileData = new FormData();
-  fileData.append("file", uploadFiles[0]);
+  let imageData = new FormData();
+  imageData.append("file", uploadFiles[0]);
 
   d3.select('#analyze-button').text("Analyzing...");
   response = await d3.json(`${window.location.href}analyze`, {
     method: 'POST',
     mode: 'cors',
-    body: fileData,
+    body: imageData,
   })
   d3.select('#result-label').text(`Result = ${response["result"]}`);
   d3.select('#prob-label').html(response['prob']);
