@@ -8,17 +8,17 @@ from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import HTMLResponse, JSONResponse
 from starlette.staticfiles import StaticFiles
+import numpy as np
 
 export_file_url = 'https://www.dropbox.com/s/6bgq8t6yextloqp/export.pkl?raw=1'
 export_file_name = 'export.pkl'
 
-classes = ['black', 'grizzly', 'teddys']
+classes = ['black', 'grizzly', 'teddy']
 path = Path(__file__).parent
 
 app = Starlette()
 app.add_middleware(CORSMiddleware, allow_origins=['*'], allow_headers=['X-Requested-With', 'Content-Type'])
 app.mount('/static', StaticFiles(directory='app/static'))
-
 
 async def download_file(url, dest):
     if dest.exists(): return
@@ -27,7 +27,6 @@ async def download_file(url, dest):
             data = await response.read()
             with open(dest, 'wb') as f:
                 f.write(data)
-
 
 async def setup_learner():
     await download_file(export_file_url, path / export_file_name)
@@ -42,27 +41,30 @@ async def setup_learner():
         else:
             raise
 
-
 loop = asyncio.get_event_loop()
 tasks = [asyncio.ensure_future(setup_learner())]
 learn = loop.run_until_complete(asyncio.gather(*tasks))[0]
 loop.close()
-
 
 @app.route('/')
 async def homepage(request):
     html_file = path / 'view' / 'index.html'
     return HTMLResponse(html_file.open().read())
 
-
 @app.route('/analyze', methods=['POST'])
 async def analyze(request):
     img_data = await request.form()
     img_bytes = await (img_data['file'].read())
     img = open_image(BytesIO(img_bytes))
-    prediction = learn.predict(img)[0]
-    return JSONResponse({'result': str(prediction)})
-
+    prediction, _, prob = learn.predict(img)
+    p = prob.numpy()
+    idx = np.argmax(p)
+    print(prediction, idx, p[idx])
+    txt = [f'{label} = {pct:.1%}' for label, pct in zip(classes,p)]
+    return JSONResponse(
+        {'result': str(prediction),
+         'prob': '<br>'.join(txt),
+    })
 
 if __name__ == '__main__':
     if 'serve' in sys.argv:
