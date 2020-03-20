@@ -4,11 +4,12 @@ function showPicker() {
 
 function showPicked(input) {
   d3.select('#upload-label').text(input.files[0].name);
+  d3.select('#prob-label').text(null);
   let reader = new FileReader();
   reader.onload = function(e) {
     d3.select("#image-picked")
         .property('src', e.target.result)
-        .attr('class', '')
+        .attr('class', '') // needed for image to show for some reason
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -19,13 +20,12 @@ async function analyzeImage() {
   let imageData = new FormData();
   imageData.append("file", uploadFiles[0]);
 
-  d3.select('#analyze-button').text("Analyzing...");
+  d3.select('#analyze-button').text("Processing...");
   response = await d3.json(`${window.location.href}analyze`, {
     method: 'POST',
     mode: 'cors',
     body: imageData,
   })
-  d3.select('#result-label').text(`Result = ${response["result"]}`);
   d3.select('#prob-label').html(response['prob']);
   d3.select('#analyze-button').text("Analyze")
 }

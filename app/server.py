@@ -13,9 +13,10 @@ import numpy as np
 export_file_url = 'https://www.dropbox.com/s/6bgq8t6yextloqp/export.pkl?raw=1'
 export_file_name = 'export.pkl'
 sidewalk_url = 'https://www.dropbox.com/s/5siwvpfrkkddpl4/sidewalk.pkl?raw=1'
-sidewalk_filename = 'sidewalk.pkl'
+sidewalk_pickle = 'sidewalk.pkl'
 
 classes = ['nosidewalk', 'sidewalk']
+classes = ['black','grizzly','teddy']
 path = Path(__file__).parent
 
 app = Starlette()
@@ -60,13 +61,11 @@ async def analyze(request):
     img_data = await request.form()
     img_bytes = await (img_data['file'].read())
     img = open_image(BytesIO(img_bytes))
-    prediction, _, prob = learn.predict(img)
-    p = prob.numpy()
-    txt = [f'{label} = {pct:.1%}' for label, pct in zip(classes,p)]
-    return JSONResponse(
-        {'result': str(prediction),
-         'prob': '<br>'.join(txt),
-    })
+    _, _, prob = learn.predict(img)
+    results = list(zip(learn.data.classes, map(float, prob)))
+    results.sort(key=lambda p: p[1], reverse=True)
+    txt = [f'{x[0]} = {x[1]:.1%}' for x in results]
+    return JSONResponse({'prob': '<br>'.join(txt)})
 
 if __name__ == '__main__':
     if 'serve' in sys.argv:
