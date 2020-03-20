@@ -12,8 +12,10 @@ import numpy as np
 
 export_file_url = 'https://www.dropbox.com/s/6bgq8t6yextloqp/export.pkl?raw=1'
 export_file_name = 'export.pkl'
+sidewalk_url = 'https://www.dropbox.com/s/5siwvpfrkkddpl4/sidewalk.pkl?raw=1'
+sidewalk_filename = 'sidewalk.pkl'
 
-classes = ['black', 'grizzly', 'teddy']
+classes = ['nosidewalk', 'sidewalk']
 path = Path(__file__).parent
 
 app = Starlette()
@@ -29,14 +31,16 @@ async def download_file(url, dest):
                 f.write(data)
 
 async def setup_learner():
-    await download_file(export_file_url, path / export_file_name)
+    await download_file(sidewalk_url, path / sidewalk_filename)
     try:
-        learn = load_learner(path, export_file_name)
+        learn = load_learner(path, sidewalk_filename)
         return learn
     except RuntimeError as e:
         if len(e.args) > 0 and 'CPU-only machine' in e.args[0]:
             print(e)
-            message = "\n\nThis model was trained with an old version of fastai and will not work in a CPU environment.\n\nPlease update the fastai library in your training environment and export your model again.\n\nSee instructions for 'Returning to work' at https://course.fast.ai."
+            message = "\n\nThis model was trained with an old version of fastai and will not work in a CPU environment."
+            message += "\n\nPlease update the fastai library in your training environment and export your model again."
+            message += "\n\nSee instructions for 'Returning to work' at https://course.fast.ai."
             raise RuntimeError(message)
         else:
             raise
@@ -58,8 +62,6 @@ async def analyze(request):
     img = open_image(BytesIO(img_bytes))
     prediction, _, prob = learn.predict(img)
     p = prob.numpy()
-    idx = np.argmax(p)
-    print(prediction, idx, p[idx])
     txt = [f'{label} = {pct:.1%}' for label, pct in zip(classes,p)]
     return JSONResponse(
         {'result': str(prediction),
@@ -67,5 +69,4 @@ async def analyze(request):
     })
 
 if __name__ == '__main__':
-    if 'serve' in sys.argv:
-        uvicorn.run(app=app, host='0.0.0.0', port=5000, log_level="info")
+    uvicorn.run(app=app, host='0.0.0.0', port=5000, log_level="info")
